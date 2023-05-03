@@ -3,3 +3,108 @@
   "features": {
   }
 }
+const nc = require('node-ncurses');
+
+const BALL_CHAR = '*';
+const PADDLE_CHAR = '|';
+const SCREEN_WIDTH = 80;
+const SCREEN_HEIGHT = 24;
+const PADDLE_HEIGHT = 5;
+const BALL_SPEED = 50;
+
+let ballX = SCREEN_WIDTH / 2;
+let ballY = SCREEN_HEIGHT / 2;
+let ballVelX = 1;
+let ballVelY = 1;
+
+let leftPaddleY = (SCREEN_HEIGHT - PADDLE_HEIGHT) / 2;
+let rightPaddleY = (SCREEN_HEIGHT - PADDLE_HEIGHT) / 2;
+
+let scoreLeft = 0;
+let scoreRight = 0;
+
+let isRunning = true;
+
+// Initialize ncurses
+nc.initscr();
+nc.cbreak();
+nc.noecho();
+nc.curs_set(0);
+nc.keypad(nc.stdscr, true);
+
+// Draw initial screen
+drawScreen();
+
+// Main game loop
+setInterval(() => {
+  handleInput();
+  updateBall();
+  drawScreen();
+}, BALL_SPEED);
+
+// Clean up ncurses on exit
+process.on('exit', () => {
+  nc.endwin();
+});
+
+function handleInput() {
+  const key = nc.getch();
+  switch (key) {
+    case nc.KEY_UP:
+      rightPaddleY = Math.max(0, rightPaddleY - 2);
+      break;
+    case nc.KEY_DOWN:
+      rightPaddleY = Math.min(SCREEN_HEIGHT - PADDLE_HEIGHT, rightPaddleY + 2);
+      break;
+    case 'w'.charCodeAt(0):
+      leftPaddleY = Math.max(0, leftPaddleY - 2);
+      break;
+    case 's'.charCodeAt(0):
+      leftPaddleY = Math.min(SCREEN_HEIGHT - PADDLE_HEIGHT, leftPaddleY + 2);
+      break;
+    case 'q'.charCodeAt(0):
+      isRunning = false;
+      break;
+  }
+}
+
+function updateBall() {
+  ballX += ballVelX;
+  ballY += ballVelY;
+
+  // Check collision with walls
+  if (ballY <= 0 || ballY >= SCREEN_HEIGHT - 1) {
+    ballVelY = -ballVelY;
+  }
+
+  // Check collision with paddles
+  if (ballX == 1 && ballY >= leftPaddleY && ballY < leftPaddleY + PADDLE_HEIGHT) {
+    ballVelX = -ballVelX;
+  } else if (ballX == SCREEN_WIDTH - 2 && ballY >= rightPaddleY && ballY < rightPaddleY + PADDLE_HEIGHT) {
+    ballVelX = -ballVelX;
+  }
+
+  // Check for scoring
+  if (ballX <= 0) {
+    scoreRight++;
+    resetBall();
+  } else if (ballX >= SCREEN_WIDTH - 1) {
+    scoreLeft++;
+    resetBall();
+  }
+}
+
+function resetBall() {
+  ballX = SCREEN_WIDTH / 2;
+  ballY = SCREEN_HEIGHT / 2;
+  ballVelX = -ballVelX;
+  ballVelY = Math.random() < 0.5 ? -1 : 1;
+}
+
+function drawScreen() {
+  // Clear screen
+  nc.clear();
+
+  // Draw top and bottom walls
+  for (let x = 0; x < SCREEN_WIDTH; x++) {
+    nc.mvaddch(0
